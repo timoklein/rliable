@@ -16,13 +16,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from matplotlib import ticker
 
 
-def _non_linear_scaling(performance_profiles,
-                        tau_list,
-                        xticklabels=None,
-                        num_points=5,
-                        log_base=2):
+def _non_linear_scaling(performance_profiles, tau_list, xticklabels=None, num_points=5, log_base=2):
   """Returns non linearly scaled tau as well as corresponding xticks.
 
   The non-linear scaling of a certain range of threshold values is proportional
@@ -52,12 +49,7 @@ def _non_linear_scaling(performance_profiles,
   nonlinear_tau = 1 - nonlinear_tau
 
   if xticklabels is None:
-    tau_indices = np.int32(
-        np.logspace(
-            start=0,
-            stop=np.log2(len(tau_list) - 1),
-            base=log_base,
-            num=num_points))
+    tau_indices = np.logspace(start=0, stop=np.log2(len(tau_list) - 1), base=log_base, num=num_points).astype(np.int32)
     xticklabels = [tau_list[i] for i in tau_indices]
   else:
     tau_as_list = list(tau_list)
@@ -67,33 +59,35 @@ def _non_linear_scaling(performance_profiles,
   return nonlinear_tau, new_xticks, xticklabels
 
 
-def _decorate_axis(ax, wrect=10, hrect=10, ticklabelsize='large'):
+def _decorate_axis(ax, wrect=10, hrect=10, ticklabelsize="large"):
   """Helper function for decorating plots."""
   # Hide the right and top spines
-  ax.spines['right'].set_visible(False)
-  ax.spines['top'].set_visible(False)
-  ax.spines['left'].set_linewidth(2)
-  ax.spines['bottom'].set_linewidth(2)
+  ax.spines["right"].set_visible(False)
+  ax.spines["top"].set_visible(False)
+  ax.spines["left"].set_linewidth(2)
+  ax.spines["bottom"].set_linewidth(2)
   # Deal with ticks and the blank space at the origin
   ax.tick_params(length=0.1, width=0.1, labelsize=ticklabelsize)
-  ax.spines['left'].set_position(('outward', hrect))
-  ax.spines['bottom'].set_position(('outward', wrect))
+  ax.spines["left"].set_position(("outward", hrect))
+  ax.spines["bottom"].set_position(("outward", wrect))
   return ax
 
 
-def _annotate_and_decorate_axis(ax,
-                                labelsize='x-large',
-                                ticklabelsize='x-large',
-                                xticks=None,
-                                xticklabels=None,
-                                yticks=None,
-                                legend=False,
-                                grid_alpha=0.2,
-                                legendsize='x-large',
-                                xlabel='',
-                                ylabel='',
-                                wrect=10,
-                                hrect=10):
+def _annotate_and_decorate_axis(
+  ax,
+  labelsize="x-large",
+  ticklabelsize="x-large",
+  xticks=None,
+  xticklabels=None,
+  yticks=None,
+  legend=False,
+  grid_alpha=0.2,
+  legendsize="x-large",
+  xlabel="",
+  ylabel="",
+  wrect=10,
+  hrect=10,
+):
   """Annotates and decorates the plot."""
   ax.set_xlabel(xlabel, fontsize=labelsize)
   ax.set_ylabel(ylabel, fontsize=labelsize)
@@ -109,21 +103,23 @@ def _annotate_and_decorate_axis(ax,
   return ax
 
 
-def plot_performance_profiles(performance_profiles,
-                              tau_list,
-                              performance_profile_cis=None,
-                              use_non_linear_scaling=False,
-                              ax=None,
-                              colors=None,
-                              color_palette='colorblind',
-                              alpha=0.15,
-                              figsize=(10, 5),
-                              xticks=None,
-                              yticks=None,
-                              xlabel=r'Normalized Score ($\tau$)',
-                              ylabel=r'Fraction of runs with score $> \tau$',
-                              linestyles=None,
-                              **kwargs):
+def plot_performance_profiles(
+  performance_profiles,
+  tau_list,
+  performance_profile_cis=None,
+  use_non_linear_scaling=False,
+  ax=None,
+  colors=None,
+  color_palette="colorblind",
+  alpha=0.15,
+  figsize=(10, 5),
+  xticks=None,
+  yticks=None,
+  xlabel=r"Normalized Score ($\tau$)",
+  ylabel=r"Fraction of runs with score $> \tau$",
+  linestyles=None,
+  **kwargs,
+):
   """Plots performance profiles with stratified confidence intervals.
 
   Args:
@@ -167,52 +163,52 @@ def plot_performance_profiles(performance_profiles,
     colors = dict(zip(list(keys), color_palette))
 
   if linestyles is None:
-    linestyles = {key: 'solid' for key in performance_profiles.keys()}
+    linestyles = {key: "solid" for key in performance_profiles.keys()}
 
   if use_non_linear_scaling:
-    tau_list, xticks, xticklabels = _non_linear_scaling(performance_profiles,
-                                                        tau_list, xticks)
+    tau_list, xticks, xticklabels = _non_linear_scaling(performance_profiles, tau_list, xticks)
   else:
     xticklabels = xticks
 
+  # Popped once, before the loop: popping inside would only apply the custom
+  # linewidth to the first method and fall back to the default for the rest.
+  linewidth = kwargs.pop("linewidth", 2.0)
+
   for method, profile in performance_profiles.items():
     ax.plot(
-        tau_list,
-        profile,
-        color=colors[method],
-        linestyle=linestyles[method],
-        linewidth=kwargs.pop('linewidth', 2.0),
-        label=method)
+      tau_list,
+      profile,
+      color=colors[method],
+      linestyle=linestyles[method],
+      linewidth=linewidth,
+      label=method,
+    )
     if performance_profile_cis is not None:
       if method in performance_profile_cis:
         lower_ci, upper_ci = performance_profile_cis[method]
-        ax.fill_between(
-            tau_list, lower_ci, upper_ci, color=colors[method], alpha=alpha)
+        ax.fill_between(tau_list, lower_ci, upper_ci, color=colors[method], alpha=alpha)
 
   if yticks is None:
     yticks = [0.0, 0.25, 0.5, 0.75, 1.0]
   return _annotate_and_decorate_axis(
-      ax,
-      xticks=xticks,
-      yticks=yticks,
-      xticklabels=xticklabels,
-      xlabel=xlabel,
-      ylabel=ylabel,
-      **kwargs)
+    ax, xticks=xticks, yticks=yticks, xticklabels=xticklabels, xlabel=xlabel, ylabel=ylabel, **kwargs
+  )
 
 
-def plot_interval_estimates(point_estimates,
-                            interval_estimates,
-                            metric_names,
-                            algorithms=None,
-                            colors=None,
-                            color_palette='colorblind',
-                            max_ticks=4,
-                            subfigure_width=3.4,
-                            row_height=0.37,
-                            xlabel_y_coordinate=-0.1,
-                            xlabel='Normalized Score',
-                            **kwargs):
+def plot_interval_estimates(
+  point_estimates,
+  interval_estimates,
+  metric_names,
+  algorithms=None,
+  colors=None,
+  color_palette="colorblind",
+  max_ticks=4,
+  subfigure_width=3.4,
+  row_height=0.37,
+  xlabel_y_coordinate=-0.1,
+  xlabel="Normalized Score",
+  **kwargs,
+):
   """Plots various metrics with confidence intervals.
 
   Args:
@@ -229,7 +225,7 @@ def plot_interval_estimates(point_estimates,
     color_palette: `seaborn.color_palette` object for mapping each method to a
       color.
     max_ticks: Find nice tick locations with no more than `max_ticks`. Passed to
-      `plt.MaxNLocator`.
+      `matplotlib.ticker.MaxNLocator`.
     subfigure_width: Width of each subfigure.
     row_height: Height of each row in a subfigure.
     xlabel_y_coordinate: y-coordinate of the x-axis label.
@@ -249,59 +245,55 @@ def plot_interval_estimates(point_estimates,
   if colors is None:
     color_palette = sns.color_palette(color_palette, n_colors=len(algorithms))
     colors = dict(zip(algorithms, color_palette))
-  h = kwargs.pop('interval_height', 0.6)
+  h = kwargs.pop("interval_height", 0.6)
 
   for idx, metric_name in enumerate(metric_names):
     for alg_idx, algorithm in enumerate(algorithms):
       ax = axes[idx] if num_metrics > 1 else axes
       # Plot interval estimates.
       lower, upper = interval_estimates[algorithm][:, idx]
-      ax.barh(
-          y=alg_idx,
-          width=upper - lower,
-          height=h,
-          left=lower,
-          color=colors[algorithm],
-          alpha=0.75,
-          label=algorithm)
+      ax.barh(y=alg_idx, width=upper - lower, height=h, left=lower, color=colors[algorithm], alpha=0.75, label=algorithm)
       # Plot point estimates.
       ax.vlines(
-          x=point_estimates[algorithm][idx],
-          ymin=alg_idx - (7.5 * h / 16),
-          ymax=alg_idx + (6 * h / 16),
-          label=algorithm,
-          color='k',
-          alpha=0.5)
+        x=point_estimates[algorithm][idx],
+        ymin=alg_idx - (7.5 * h / 16),
+        ymax=alg_idx + (6 * h / 16),
+        label=algorithm,
+        color="k",
+        alpha=0.5,
+      )
 
     ax.set_yticks(list(range(len(algorithms))))
-    ax.xaxis.set_major_locator(plt.MaxNLocator(max_ticks))
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(max_ticks))
     if idx != 0:
       ax.set_yticks([])
     else:
-      ax.set_yticklabels(algorithms, fontsize='x-large')
-    ax.set_title(metric_name, fontsize='xx-large')
-    ax.tick_params(axis='both', which='major')
-    _decorate_axis(ax, ticklabelsize='xx-large', wrect=5)
-    ax.spines['left'].set_visible(False)
-    ax.grid(True, axis='x', alpha=0.25)
-  fig.text(0.4, xlabel_y_coordinate, xlabel, ha='center', fontsize='xx-large')
-  plt.subplots_adjust(wspace=kwargs.pop('wspace', 0.11), left=0.0)
+      ax.set_yticklabels(algorithms, fontsize="x-large")
+    ax.set_title(metric_name, fontsize="xx-large")
+    ax.tick_params(axis="both", which="major")
+    _decorate_axis(ax, ticklabelsize="xx-large", wrect=5)
+    ax.spines["left"].set_visible(False)
+    ax.grid(True, axis="x", alpha=0.25)
+  fig.text(0.4, xlabel_y_coordinate, xlabel, ha="center", fontsize="xx-large")
+  plt.subplots_adjust(wspace=kwargs.pop("wspace", 0.11), left=0.0)
   return fig, axes
 
 
-def plot_sample_efficiency_curve(frames,
-                                 point_estimates,
-                                 interval_estimates,
-                                 algorithms=None,
-                                 colors=None,
-                                 color_palette='colorblind',
-                                 figsize=(7, 5),
-                                 xlabel=r'Number of Frames (in millions)',
-                                 ylabel='Aggregate Human Normalized Score',
-                                 ax=None,
-                                 labelsize='xx-large',
-                                 ticklabelsize='xx-large',
-                                 **kwargs):
+def plot_sample_efficiency_curve(
+  frames,
+  point_estimates,
+  interval_estimates,
+  algorithms=None,
+  colors=None,
+  color_palette="colorblind",
+  figsize=(7, 5),
+  xlabel=r"Number of Frames (in millions)",
+  ylabel="Aggregate Human Normalized Score",
+  ax=None,
+  labelsize="xx-large",
+  ticklabelsize="xx-large",
+  **kwargs,
+):
   """Plots an aggregate metric with CIs as a function of environment frames.
 
   Args:
@@ -341,40 +333,37 @@ def plot_sample_efficiency_curve(frames,
     metric_values = point_estimates[algorithm]
     lower, upper = interval_estimates[algorithm]
     ax.plot(
-        frames,
-        metric_values,
-        color=colors[algorithm],
-        marker=kwargs.get('marker', 'o'),
-        linewidth=kwargs.get('linewidth', 2),
-        label=algorithm)
-    ax.fill_between(
-        frames, y1=lower, y2=upper, color=colors[algorithm], alpha=0.2)
-  kwargs.pop('marker', '0')
-  kwargs.pop('linewidth', '2')
+      frames,
+      metric_values,
+      color=colors[algorithm],
+      marker=kwargs.get("marker", "o"),
+      linewidth=kwargs.get("linewidth", 2),
+      label=algorithm,
+    )
+    ax.fill_between(frames, y1=lower, y2=upper, color=colors[algorithm], alpha=0.2)
+  kwargs.pop("marker", "0")
+  kwargs.pop("linewidth", "2")
 
   return _annotate_and_decorate_axis(
-      ax,
-      xlabel=xlabel,
-      ylabel=ylabel,
-      labelsize=labelsize,
-      ticklabelsize=ticklabelsize,
-      **kwargs)
+    ax, xlabel=xlabel, ylabel=ylabel, labelsize=labelsize, ticklabelsize=ticklabelsize, **kwargs
+  )
 
 
 def plot_probability_of_improvement(
-    probability_estimates,
-    probability_interval_estimates,
-    pair_separator=',',
-    ax=None,
-    figsize=(4, 3),
-    colors=None,
-    color_palette='colorblind',
-    alpha=0.75,
-    xticks=None,
-    xlabel='P(X > Y)',
-    left_ylabel='Algorithm X',
-    right_ylabel='Algorithm Y',
-    **kwargs):
+  probability_estimates,
+  probability_interval_estimates,
+  pair_separator=",",
+  ax=None,
+  figsize=(4, 3),
+  colors=None,
+  color_palette="colorblind",
+  alpha=0.75,
+  xticks=None,
+  xlabel="P(X > Y)",
+  left_ylabel="Algorithm X",
+  right_ylabel="Algorithm Y",
+  **kwargs,
+):
   """Plots probability of improvement with confidence intervals.
 
   Args:
@@ -409,14 +398,13 @@ def plot_probability_of_improvement(
   if ax is None:
     _, ax = plt.subplots(figsize=figsize)
   if not colors:
-    colors = sns.color_palette(
-        color_palette, n_colors=len(probability_estimates))
-  h = kwargs.pop('interval_height', 0.6)
-  wrect = kwargs.pop('wrect', 5)
-  ticklabelsize = kwargs.pop('ticklabelsize', 'x-large')
-  labelsize = kwargs.pop('labelsize', 'x-large')
+    colors = sns.color_palette(color_palette, n_colors=len(probability_estimates))
+  h = kwargs.pop("interval_height", 0.6)
+  wrect = kwargs.pop("wrect", 5)
+  ticklabelsize = kwargs.pop("ticklabelsize", "x-large")
+  labelsize = kwargs.pop("labelsize", "x-large")
   # x-position of the y-label
-  ylabel_x_coordinate = kwargs.pop('ylabel_x_coordinate', 0.2)
+  ylabel_x_coordinate = kwargs.pop("ylabel_x_coordinate", 0.2)
   # x-position of the y-label
 
   twin_ax = ax.twinx()
@@ -429,74 +417,45 @@ def plot_probability_of_improvement(
     all_algorithm_x.append(algorithm_x)
     all_algorithm_y.append(algorithm_y)
 
-    ax.barh(
-        y=idx,
-        width=upper - lower,
-        height=h,
-        left=lower,
-        color=colors[idx],
-        alpha=alpha,
-        label=algorithm_x)
-    twin_ax.barh(
-        y=idx,
-        width=upper - lower,
-        height=h,
-        left=lower,
-        color=colors[idx],
-        alpha=0.0,
-        label=algorithm_y)
-    ax.vlines(
-        x=prob,
-        ymin=idx - 7.5 * h / 16,
-        ymax=idx + (6 * h / 16),
-        color='k',
-        alpha=min(alpha + 0.1, 1.0))
+    ax.barh(y=idx, width=upper - lower, height=h, left=lower, color=colors[idx], alpha=alpha, label=algorithm_x)
+    twin_ax.barh(y=idx, width=upper - lower, height=h, left=lower, color=colors[idx], alpha=0.0, label=algorithm_y)
+    ax.vlines(x=prob, ymin=idx - 7.5 * h / 16, ymax=idx + (6 * h / 16), color="k", alpha=min(alpha + 0.1, 1.0))
 
   # Beautify plots
   yticks = range(len(probability_estimates))
   ax = _annotate_and_decorate_axis(
-      ax,
-      xticks=xticks,
-      yticks=yticks,
-      xticklabels=xticks,
-      xlabel=xlabel,
-      ylabel=left_ylabel,
-      wrect=wrect,
-      ticklabelsize=ticklabelsize,
-      labelsize=labelsize,
-      **kwargs)
+    ax,
+    xticks=xticks,
+    yticks=yticks,
+    xticklabels=xticks,
+    xlabel=xlabel,
+    ylabel=left_ylabel,
+    wrect=wrect,
+    ticklabelsize=ticklabelsize,
+    labelsize=labelsize,
+    **kwargs,
+  )
   twin_ax = _annotate_and_decorate_axis(
-      twin_ax,
-      xticks=xticks,
-      yticks=yticks,
-      xticklabels=xticks,
-      xlabel=xlabel,
-      ylabel=right_ylabel,
-      wrect=wrect,
-      labelsize=labelsize,
-      ticklabelsize=ticklabelsize,
-      grid_alpha=0.0,
-      **kwargs)
-  twin_ax.set_yticklabels(all_algorithm_y, fontsize='large')
-  ax.set_yticklabels(all_algorithm_x, fontsize='large')
-  twin_ax.set_ylabel(
-      right_ylabel,
-      fontweight='bold',
-      rotation='horizontal',
-      va='bottom',
-      fontsize=labelsize)
-  ax.set_ylabel(
-      left_ylabel,
-      fontweight='bold',
-      rotation='horizontal',
-      va='bottom',
-      fontsize=labelsize)
+    twin_ax,
+    xticks=xticks,
+    yticks=yticks,
+    xticklabels=xticks,
+    xlabel=xlabel,
+    ylabel=right_ylabel,
+    wrect=wrect,
+    labelsize=labelsize,
+    ticklabelsize=ticklabelsize,
+    grid_alpha=0.0,
+    **kwargs,
+  )
+  twin_ax.set_ylabel(right_ylabel, fontweight="bold", rotation="horizontal", va="bottom", fontsize=labelsize)
+  ax.set_ylabel(left_ylabel, fontweight="bold", rotation="horizontal", va="bottom", fontsize=labelsize)
   twin_ax.set_yticklabels(all_algorithm_y, fontsize=ticklabelsize)
   ax.set_yticklabels(all_algorithm_x, fontsize=ticklabelsize)
-  ax.tick_params(axis='both', which='major')
-  twin_ax.tick_params(axis='both', which='major')
-  ax.spines['left'].set_visible(False)
-  twin_ax.spines['left'].set_visible(False)
+  ax.tick_params(axis="both", which="major")
+  twin_ax.tick_params(axis="both", which="major")
+  ax.spines["left"].set_visible(False)
+  twin_ax.spines["left"].set_visible(False)
   ax.yaxis.set_label_coords(-ylabel_x_coordinate, 1.0)
   twin_ax.yaxis.set_label_coords(1 + 0.7 * ylabel_x_coordinate, 1.0)
 
