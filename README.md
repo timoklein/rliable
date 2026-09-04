@@ -1,3 +1,10 @@
+> [!NOTE]
+> This is a maintained fork of the archived [google-research/rliable](https://github.com/google-research/rliable).
+> 2.0.0 removes the `arch` and `absl` dependencies (bootstrap is now pure numpy/scipy) and works with current
+> numpy 2, pandas 3, seaborn 0.13, and Python 3.10-3.13. `random_state` is now actually reproducible (it was
+> silently ignored upstream). The bootstrap is vectorized, with an opt-in batched fast path (`metrics.batched`),
+> plus a DataFrame loader (`rliable.data`) and plot bug fixes. See [CHANGELOG.md](CHANGELOG.md) for details.
+> Install: `uv pip install "rliable @ git+https://github.com/timoklein/rliable@v2.0.0"`.
 
 # [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1a0pSD-1tWhMmeJeeoyZM1A-HCW3yf1xR?usp=sharing) [![Website](https://img.shields.io/badge/www-Website-green)](https://agarwl.github.io/rliable) [![Blog](https://img.shields.io/badge/b-Blog-blue)](https://ai.googleblog.com/2021/11/rliable-towards-reliable-evaluation.html)
 
@@ -40,15 +47,17 @@ For more details, refer to the accompanying **NeurIPS 2021** paper (**Outstandin
 
 ### Installation
 
-To install `rliable`, run:
+This fork is not published to PyPI (the `rliable` name there belongs to the archived upstream). Install
+from a tagged commit:
+
 ```python
-pip install -U rliable
+uv pip install "rliable @ git+https://github.com/timoklein/rliable@v2.0.0"
 ```
 
-To install latest version of `rliable` as a package, run:
+or with plain pip:
 
 ```python
-pip install git+https://github.com/google-research/rliable
+pip install "rliable @ git+https://github.com/timoklein/rliable@v2.0.0"
 ```
 
 To import `rliable`, we suggest:
@@ -85,6 +94,28 @@ fig, axes = plot_utils.plot_interval_estimates(
 <div align="left">
   <img src="https://raw.githubusercontent.com/google-research/rliable/master/images/ale_interval_estimates.png">
 </div>
+
+A faster, batched variant of the same computation: `metrics.batched` marks a function that accepts a
+whole chunk of bootstrap replications at once (a leading axis of size `reps`) instead of being called
+once per replication, so the bootstrap runs in a handful of vectorized calls rather than a Python loop.
+```python
+aggregate_func = metrics.batched(lambda x: np.stack([
+    metrics.aggregate_median_batched(x), metrics.aggregate_iqm_batched(x),
+    metrics.aggregate_mean_batched(x), metrics.aggregate_optimality_gap_batched(x)], axis=1))
+aggregate_scores, aggregate_score_cis = rly.get_interval_estimates(
+    atari_200m_normalized_score_dict, aggregate_func, reps=50000, random_state=0)
+```
+
+### Loading scores from a DataFrame
+
+If your scores live in a long-format DataFrame (one row per run/task combination), `rliable.data` builds
+the score dictionary directly instead of you pivoting it by hand:
+```python
+from rliable import data
+
+score_dict, tasks = data.load_score_dict_from_dataframe(
+    df, algorithm_col='algorithm', run_col='seed', task_col='game', score_col='normalized_score')
+```
 
 ##### Probability of Improvement
 ```python
@@ -163,13 +194,13 @@ plot_utils.plot_performance_profiles(
 
 
 ### Dependencies
-The code was tested under `Python>=3.7` and uses these packages:
+The code is tested under `Python>=3.10` and uses these packages:
 
-- arch == 5.3.0
-- scipy >= 1.7.0
-- numpy >= 0.9.0
-- absl-py >= 1.16.4
-- seaborn >= 0.11.2
+- numpy >= 1.24
+- scipy >= 1.10
+- pandas >= 2.0
+- seaborn >= 0.12
+- matplotlib >= 3.7
 
 Citing
 ------
